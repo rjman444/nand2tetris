@@ -1,0 +1,391 @@
+// Push constant 17
+@17
+D=A
+@R0
+A=M
+M=D
+@R0
+M=M+1
+// Push constant 17
+@17
+D=A
+@R0
+A=M
+M=D
+@R0
+M=M+1
+// eq command
+@R0
+AM=M-1
+D=M
+@R0
+A=M-1
+D=M-D
+@TRUE:0
+D;JEQ
+@R0
+A=M-1
+M=0
+@END:0
+0;JMP
+(TRUE:0)
+@R0
+A=M-1
+M=-1
+(END:0)
+// Push constant 17
+@17
+D=A
+@R0
+A=M
+M=D
+@R0
+M=M+1
+// Push constant 16
+@16
+D=A
+@R0
+A=M
+M=D
+@R0
+M=M+1
+// eq command
+@R0
+AM=M-1
+D=M
+@R0
+A=M-1
+D=M-D
+@TRUE:1
+D;JEQ
+@R0
+A=M-1
+M=0
+@END:1
+0;JMP
+(TRUE:1)
+@R0
+A=M-1
+M=-1
+(END:1)
+// Push constant 16
+@16
+D=A
+@R0
+A=M
+M=D
+@R0
+M=M+1
+// Push constant 17
+@17
+D=A
+@R0
+A=M
+M=D
+@R0
+M=M+1
+// eq command
+@R0
+AM=M-1
+D=M
+@R0
+A=M-1
+D=M-D
+@TRUE:2
+D;JEQ
+@R0
+A=M-1
+M=0
+@END:2
+0;JMP
+(TRUE:2)
+@R0
+A=M-1
+M=-1
+(END:2)
+// Push constant 892
+@892
+D=A
+@R0
+A=M
+M=D
+@R0
+M=M+1
+// Push constant 891
+@891
+D=A
+@R0
+A=M
+M=D
+@R0
+M=M+1
+// lt command
+@R0
+AM=M-1
+D=M
+@R0
+A=M-1
+D=M-D
+@TRUE:3
+D;JLT
+@R0
+A=M-1
+M=0
+@END:3
+0;JMP
+(TRUE:3)
+@R0
+A=M-1
+M=-1
+(END:3)
+// Push constant 891
+@891
+D=A
+@R0
+A=M
+M=D
+@R0
+M=M+1
+// Push constant 892
+@892
+D=A
+@R0
+A=M
+M=D
+@R0
+M=M+1
+// lt command
+@R0
+AM=M-1
+D=M
+@R0
+A=M-1
+D=M-D
+@TRUE:4
+D;JLT
+@R0
+A=M-1
+M=0
+@END:4
+0;JMP
+(TRUE:4)
+@R0
+A=M-1
+M=-1
+(END:4)
+// Push constant 891
+@891
+D=A
+@R0
+A=M
+M=D
+@R0
+M=M+1
+// Push constant 891
+@891
+D=A
+@R0
+A=M
+M=D
+@R0
+M=M+1
+// lt command
+@R0
+AM=M-1
+D=M
+@R0
+A=M-1
+D=M-D
+@TRUE:5
+D;JLT
+@R0
+A=M-1
+M=0
+@END:5
+0;JMP
+(TRUE:5)
+@R0
+A=M-1
+M=-1
+(END:5)
+// Push constant 32767
+@32767
+D=A
+@R0
+A=M
+M=D
+@R0
+M=M+1
+// Push constant 32766
+@32766
+D=A
+@R0
+A=M
+M=D
+@R0
+M=M+1
+// gt command
+@R0
+AM=M-1
+D=M
+@R0
+A=M-1
+D=M-D
+@TRUE:6
+D;JGT
+@R0
+A=M-1
+M=0
+@END:6
+0;JMP
+(TRUE:6)
+@R0
+A=M-1
+M=-1
+(END:6)
+// Push constant 32766
+@32766
+D=A
+@R0
+A=M
+M=D
+@R0
+M=M+1
+// Push constant 32767
+@32767
+D=A
+@R0
+A=M
+M=D
+@R0
+M=M+1
+// gt command
+@R0
+AM=M-1
+D=M
+@R0
+A=M-1
+D=M-D
+@TRUE:7
+D;JGT
+@R0
+A=M-1
+M=0
+@END:7
+0;JMP
+(TRUE:7)
+@R0
+A=M-1
+M=-1
+(END:7)
+// Push constant 32766
+@32766
+D=A
+@R0
+A=M
+M=D
+@R0
+M=M+1
+// Push constant 32766
+@32766
+D=A
+@R0
+A=M
+M=D
+@R0
+M=M+1
+// gt command
+@R0
+AM=M-1
+D=M
+@R0
+A=M-1
+D=M-D
+@TRUE:8
+D;JGT
+@R0
+A=M-1
+M=0
+@END:8
+0;JMP
+(TRUE:8)
+@R0
+A=M-1
+M=-1
+(END:8)
+// Push constant 57
+@57
+D=A
+@R0
+A=M
+M=D
+@R0
+M=M+1
+// Push constant 31
+@31
+D=A
+@R0
+A=M
+M=D
+@R0
+M=M+1
+// Push constant 53
+@53
+D=A
+@R0
+A=M
+M=D
+@R0
+M=M+1
+// add command
+@R0
+AM=M-1
+D=M
+@R0
+A=M-1
+M=M+D
+// Push constant 112
+@112
+D=A
+@R0
+A=M
+M=D
+@R0
+M=M+1
+// sub command
+@R0
+AM=M-1
+D=M
+@R0
+A=M-1
+M=M-D
+// neg command
+@R0
+A=M-1
+M=-M
+// and command
+@R0
+AM=M-1
+D=M
+@R0
+A=M-1
+M=M&D
+// Push constant 82
+@82
+D=A
+@R0
+A=M
+M=D
+@R0
+M=M+1
+// or command
+@R0
+AM=M-1
+D=M
+@R0
+A=M-1
+M=M|D
+// not command
+@R0
+A=M-1
+M=!M
