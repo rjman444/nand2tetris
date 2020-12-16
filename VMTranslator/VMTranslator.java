@@ -44,7 +44,7 @@ public class VMTranslator {
                     advance();
                 }
             } else {
-                String[] cmd = line.split(" ");
+                String[] cmd = line.split("\\s+");
                 
                 // Arithmetic Commands
                 if (cmd[0].equals("add")){
@@ -220,7 +220,7 @@ public class VMTranslator {
                     } else if (segment.equals("this")) {
                         p.println("@THIS");
                     } else if (segment.equals("that")) {
-                        p.println("@THIS");
+                        p.println("@THAT");
                     }
                         p.println("D=M");
                         p.println("@" + i);
@@ -288,6 +288,7 @@ public class VMTranslator {
         }
         
         public void writeInit() {
+            p.println("// Init");
             p.println("@256");
             p.println("D=A");
             p.println("@SP");
@@ -296,15 +297,18 @@ public class VMTranslator {
         }
             
         public void writeLabel(String label) {
+            p.println("// Label " + label);
             p.println("(" + label + ")");
         }
 
         public void writeGoto(String label) {
+            p.println("// Goto " + label);
             p.println("@" + label);
             p.println("0;JMP");
         }
 
         public void writeIf(String label) {
+            p.println("// If " + label);
             p.println("@SP");
             p.println("AM=M-1");
             p.println("D=M");
@@ -313,6 +317,7 @@ public class VMTranslator {
         }
 
         public void writeCall(String fnName, int numArgs) {
+            p.println("// Call " + fnName);
             p.println("@ret:" + Integer.toString(r)); // Push Return Address
             p.println("D=A");
             p.println("@SP");
@@ -330,6 +335,7 @@ public class VMTranslator {
             p.println("M=M+1"); 
         
             p.println("@ARG"); // Save ARG of caller
+            p.println("D=M");
             p.println("@SP");
             p.println("A=M");
             p.println("M=D");
@@ -337,6 +343,7 @@ public class VMTranslator {
             p.println("M=M+1");
 
             p.println("@THIS"); // Save THIS of caller
+            p.println("D=M");
             p.println("@SP");
             p.println("A=M");
             p.println("M=D");
@@ -344,6 +351,7 @@ public class VMTranslator {
             p.println("M=M+1");
 
             p.println("@THAT"); // Save THAT of caller
+            p.println("D=M");
             p.println("@SP");
             p.println("A=M");
             p.println("M=D");
@@ -366,12 +374,14 @@ public class VMTranslator {
 
             writeGoto(fnName); // Go to callee
 
-            p.println("@ret:" + Integer.toString(r)); // Set return address
+            p.println("(ret:" + Integer.toString(r) + ")"); // Set return address
 
             r += 1;
         }
 
         public void writeReturn() {
+            p.println("// Return");
+
             p.println("@LCL"); // Save LCL in R13
             p.println("D=M");
             p.println("@R13");
@@ -426,6 +436,7 @@ public class VMTranslator {
         }
 
         public void writeFunction(String fnName, int numLocals) {
+            p.println("// Function " + fnName);
             p.println("(" + fnName + ")");
             for (int i = 0; i < numLocals; i++) {
                 writePushPop(CTYPE.C_PUSH, "constant", 0);
@@ -448,37 +459,82 @@ public class VMTranslator {
         }
 
         String fileName = args[0];
-        String outputName = fileName.substring(0, fileName.length() - 3);
-        Parser p = new Parser(new FileInputStream(fileName));
-        CodeWriter c = new CodeWriter(new FileOutputStream(outputName + ".asm"));
-        String currentFunction = "";
-        c.setFileName(outputName); 
-        c.writeInit();
-        while (p.hasMoreCommands()) {
-            p.advance();
-            if (p.commandType() == CTYPE.C_ARITHMETIC) {
-                c.writeArithmetic(p.arg1());
-            } else if (p.commandType() == CTYPE.C_POP || p.commandType() == CTYPE.C_PUSH) {
-                c.writePushPop(p.commandType(), p.arg1(), p.arg2());
-            } else if (p.commandType() == CTYPE.C_FUNCTION) {
-                currentFunction = p.arg1();
-                c.writeFunction(p.arg1(), p.arg2());
-            } else if (p.commandType() == CTYPE.C_CALL) {
-                c.writeCall(p.arg1(), p.arg2());
-            } else if (p.commandType() == CTYPE.C_RETURN) {
-                c.writeReturn();
-            } else if (p.commandType() == CTYPE.C_IF) {
-                c.writeIf(currentFunction + "$" + p.arg1());
-            } else if (p.commandType() == CTYPE.C_GOTO) {
-                c.writeGoto(currentFunction + "$" + p.arg1());
-            } else if (p.commandType() == CTYPE.C_LABEL) {
-                c.writeLabel(currentFunction + "$" + p.arg1());
-            }
-        }
-
-        c.close();
-
+        File input = new File(fileName);
         
+        if (input.isDirectory()) {
+            
+            File[] fileList = input.listFiles();
+            CodeWriter c = new CodeWriter(new FileOutputStream(fileName + "/" + fileName + ".asm"));
 
-    }
+            if (fileList != null) {
+
+                c.writeInit();
+
+                for (File child: fileList) {
+                    String childName = child.getName();
+                    if (childName.endsWith(".vm")){
+                            Parser p = new Parser(new FileInputStream(fileName + "/" + childName));
+                            String currentFunction = "";
+                            c.setFileName(childName.substring(0, childName.length() - 3)); 
+                            while (p.hasMoreCommands()) {
+                                p.advance();
+                                if (p.commandType() == CTYPE.C_ARITHMETIC) {
+                                    c.writeArithmetic(p.arg1());
+                                } else if (p.commandType() == CTYPE.C_POP || p.commandType() == CTYPE.C_PUSH) {
+                                    c.writePushPop(p.commandType(), p.arg1(), p.arg2());
+                                } else if (p.commandType() == CTYPE.C_FUNCTION) {
+                                    currentFunction = p.arg1();
+                                    c.writeFunction(p.arg1(), p.arg2());
+                                } else if (p.commandType() == CTYPE.C_CALL) {
+                                    c.writeCall(p.arg1(), p.arg2());
+                                } else if (p.commandType() == CTYPE.C_RETURN) {
+                                    c.writeReturn();
+                                } else if (p.commandType() == CTYPE.C_IF) {
+                                    c.writeIf(currentFunction + "$" + p.arg1());
+                                } else if (p.commandType() == CTYPE.C_GOTO) {
+                                    c.writeGoto(currentFunction + "$" + p.arg1());
+                                } else if (p.commandType() == CTYPE.C_LABEL) {
+                                    c.writeLabel(currentFunction + "$" + p.arg1());
+                                }
+                            }
+                        }
+                    }
+                }
+
+            c.close();
+            }  else if (input.isFile()) {
+                    String justName = fileName.substring(0, fileName.length() - 3);
+                    CodeWriter c = new CodeWriter(new FileOutputStream(justName + ".asm"));
+
+                    Parser p = new Parser(new FileInputStream(fileName));
+                    String currentFunction = "";
+                    c.setFileName(justName); 
+                    while (p.hasMoreCommands()) {
+                        p.advance();
+                        if (p.commandType() == CTYPE.C_ARITHMETIC) {
+                            c.writeArithmetic(p.arg1());
+                        } else if (p.commandType() == CTYPE.C_POP || p.commandType() == CTYPE.C_PUSH) {
+                            c.writePushPop(p.commandType(), p.arg1(), p.arg2());
+                        } else if (p.commandType() == CTYPE.C_FUNCTION) {
+                            currentFunction = p.arg1();
+                            c.writeFunction(p.arg1(), p.arg2());
+                        } else if (p.commandType() == CTYPE.C_CALL) {
+                            c.writeCall(p.arg1(), p.arg2());
+                        } else if (p.commandType() == CTYPE.C_RETURN) {
+                            c.writeReturn();
+                        } else if (p.commandType() == CTYPE.C_IF) {
+                            c.writeIf(currentFunction + "$" + p.arg1());
+                        } else if (p.commandType() == CTYPE.C_GOTO) {
+                            c.writeGoto(currentFunction + "$" + p.arg1());
+                        } else if (p.commandType() == CTYPE.C_LABEL) {
+                            c.writeLabel(currentFunction + "$" + p.arg1());
+                        }
+                    }
+
+                    c.close();
+
+
+            }
+
+        }
 }

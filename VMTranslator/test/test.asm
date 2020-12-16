@@ -1,7 +1,9 @@
+// Init
 @256
 D=A
 @SP
 M=D
+// Call Sys.init
 @ret:0
 D=A
 @SP
@@ -17,18 +19,21 @@ M=D
 @SP
 M=M+1
 @ARG
+D=M
 @SP
 A=M
 M=D
 @SP
 M=M+1
 @THIS
+D=M
 @SP
 A=M
 M=D
 @SP
 M=M+1
 @THAT
+D=M
 @SP
 A=M
 M=D
@@ -45,6 +50,7 @@ M=D
 D=M
 @LCL
 M=D
+// Goto Sys.init
 @Sys.init
 0;JMP
-@ret:0
+(ret:0)

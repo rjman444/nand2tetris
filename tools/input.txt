@@ -1,0 +1,7 @@
+class Test {
+    // int x, y, z;
+    // x = 5;
+    // y = 10;
+    hello = "hello there"; //Blash Blash Blash
+    // return z;
+}
