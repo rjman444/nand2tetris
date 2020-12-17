@@ -21,6 +21,7 @@ public class JackCompiler {
        }
 
        public void Define(String name, String type, String kind) {
+           kind = kind.toUpperCase();
            if (kind.equals("STATIC")) {
                Symbol S = new Symbol(type, kind, staticCount++);
                ctb.put(name, S);
@@ -36,6 +37,7 @@ public class JackCompiler {
            } else {
                System.out.println("ERROR: Wrong kind given to symbol table");
            }
+
        }
 
        public int VarCount(String kind) {
@@ -108,7 +110,7 @@ public class JackCompiler {
             public Symbol(String t, String k, int i) {
                 type = t;
                 kind = k;
-                i = index;
+                index = i;
             }
         }
 
@@ -122,11 +124,63 @@ public class JackCompiler {
         }
 
         public void writePush(String segment, int index) {
-           p.println("push " + segment.toLowerCase() + " " + Integer.toString(index));
+            String i = Integer.toString(index);
+            switch (segment) {
+                case "CONST":
+                   p.println("push constant " + i);
+                   break;
+                case "ARG":
+                   p.println("push argument " + i);
+                   break;
+                case "LOCAL":
+                   p.println("push local " + i);
+                   break;
+                case "STATIC":
+                   p.println("push static " + i);
+                   break;
+                case "THIS":
+                   p.println("push this " + i);
+                   break;
+                case "THAT":
+                   p.println("push that " + i);
+                   break;
+                case "POINTER":
+                   p.println("push pointer " + i);
+                   break;
+                case "TEMP":
+                   p.println("push temp " + i);
+                   break;
+            }
         }
         
         public void writePop(String segment, int index) {
-           p.println("pop " + segment.toLowerCase() + " " + Integer.toString(index));
+            String i = Integer.toString(index);
+            switch (segment) {
+                case "CONST":
+                   p.println("pop constant " + i);
+                   break;
+                case "ARG":
+                   p.println("pop argument " + i);
+                   break;
+                case "LOCAL":
+                   p.println("pop local " + i);
+                   break;
+                case "STATIC":
+                   p.println("pop static " + i);
+                   break;
+                case "THIS":
+                   p.println("pop this " + i);
+                   break;
+                case "THAT":
+                   p.println("pop that " + i);
+                   break;
+                case "POINTER":
+                   p.println("pop pointer " + i);
+                   break;
+                case "TEMP":
+                   p.println("pop temp " + i);
+                   break;
+            }
         }
 
         public void writeArithmetic(String command) {
@@ -321,74 +375,40 @@ public class JackCompiler {
         public CompilationEngine(FileInputStream i, FileOutputStream o) {
             t = new JackTokenizer(i);
             v = new VMWriter(o);
+            st = new SymbolTable();
         }
             
-        private void parse() throws Exception {
-            char s;
-            String sym;
-            switch (t.tokenType()) {
-                case "SYMBOL":
-                    s = t.symbol();
-                    if (s == '<'){
-                        sym = "&lt;";
-                        p.println("<symbol> " + sym + " </symbol>");
-                    } else if (s == '>'){
-                        sym = "&gt;";
-                        p.println("<symbol> " + sym + " </symbol>");
-                    } else if (s == '"') { 
-                        sym = "&quote;"; 
-                        p.println("<symbol> " + sym + " </symbol>");
-                    } else if (s == '&') { 
-                        sym = "&amp;";
-                        p.println("<symbol> " + sym + " </symbol>");
-                    } else {
-                        p.println("<symbol> " + t.symbol() + " </symbol>");
-                    }
-                    break;
-                case "KEYWORD":
-                    p.println("<keyword> " + t.keyWord() + " </keyword>");
-                    break;
-                case "IDENTIFIER":
-                    p.println("<identifier> " + t.identifier() + " </identifier>");
-                    break;
-                case "INT_CONST":
-                    p.println("<integerConstant> " + t.intVal() + " </integerConstant>");
-                    break;
-                case "STRING_CONST":
-                    p.println("<stringConstant> " + t.stringVal() + " </stringConstant>");
-                    break;
-                }
-            }
-     
-
-        private boolean next() throws Exception {
+        private void next() throws Exception {
             if (t.hasMoreTokens()) {
                 t.advance();
-                return true;
-            } else {
-                return false;
             }
         }
 
-        private void pn() throws Exception{
-            next();
-            parse();
-        }
-
-        public void po() throws Exception {
-            while (t.hasMoreTokens()) {
-                t.advance();
-                parse();
+        private void currentToken() throws Exception {
+            switch (t.tokenType()) {
+                case "IDENTIFIER":
+                    System.out.println("Current Token is Identifier: " + t.identifier());
+                    break;
+                case "KEYWORD":
+                    System.out.println("Current Token is Keyword: " + t.keyWord());
+                    break;
+                case "SYMBOL":
+                    System.out.println("Current Token is Symbol: " + t.symbol());
+                    break;
+                case "INT_CONST":
+                    System.out.println("Current Token is Int Constant: " + t.intVal());
+                    break;
+                case "STRING_CONST":
+                    System.out.println("Current Token is String Constant " + t.stringVal());
+                    break;
             }
-            p.close();
         }
 
         public void CompileClass() throws Exception {
-            p.println("<class>");
 
-            pn(); // Compile class keyword
-            pn(); // Compile className
-            pn(); // Compile { symbol
+            next(); // Compile class keyword
+            next(); // Compile className
+            next(); // Compile { symbol
             next();
 
             while (t.tokenType().equals("KEYWORD") && (t.keyWord().equals("static") || t.keyWord().equals("field"))) {
@@ -401,101 +421,110 @@ public class JackCompiler {
                 next();
             }
 
-            parse(); // Compile } symbol 
-            p.println("</class>");
-            p.close();
+            next(); // Compile } symbol 
+            v.close();
         }
 
-        public  void CompileClassVarDec() throws Exception{
-            p.println("<classVarDec>");
-            parse(); // static or field
-            pn(); // Type
-            pn(); // varName 
+        public void CompileClassVarDec() throws Exception{
+            String kind = t.keyWord();
+            String type = "";
+            next();
+            if (t.tokenType().equals("KEYWORD")) {
+                type = t.keyWord();
+            } else {
+                type = t.identifier();
+            }
+            next();
+            String name = t.identifier(); 
+            st.Define(name, type, kind); 
+            System.out.println(name + " " + st.KindOf(name) + " " + st.TypeOf(name) + " " + st.IndexOf(name));
             next();
             while (t.tokenType().equals("SYMBOL") && t.symbol() == ',') {
-                parse(); // ,
-                pn(); // varName
+                next();
+                name = t.identifier();
+                st.Define(name, type, kind);
+                System.out.println(name + " " + st.KindOf(name) + " " + st.TypeOf(name) + " " + st.IndexOf(name));
                 next();
             }
-            parse(); // ;
-            p.println("</classVarDec>");
         }
 
-        public  void CompileSubRoutine() throws Exception{
-            p.println("<subroutineDec>");
+        public void CompileSubRoutine() throws Exception {
+            st.startSubroutine();
+            
+            next(); // constructor or function or method
+            next(); // void or type
+            System.out.println("Compiling " + t.identifier());
+            String subRoutineName = t.identifier();
+            next(); // subroutine name
 
-            parse(); // constructor or function or method
-            pn(); // void or type
-            pn(); // subroutine name
-            pn(); // (
-            CompileParameterList();
-            parse(); // )
-
-            // Subroutine Body
-            p.println("<subroutineBody>");
-            pn(); // {
-
-            // Var Decs
+            int locals = CompileParameterList();
             next();
 
-            if (t.keyWord().equals("var")) {
+            v.writeFunction(subRoutineName, locals);
+
+            // Subroutine Body
+            next(); // {
+
+
+            // Var Decs
+
+            while (t.tokenType().equals("KEYWORD") && t.keyWord().equals("var")) {
                 CompileVarDec();
+                next();
             }
 
-        
             // Statements
             CompileStatements();
-
-    
-            parse(); // }
-
-            p.println("</subroutineBody>");
-            p.println("</subroutineDec>");
-            
         }
 
-        public  void CompileParameterList() throws Exception {
-            p.println("<parameterList>");
+        public int CompileParameterList() throws Exception {
+            int locals = 0;
             next();
             if (t.tokenType().equals("SYMBOL")) {
                 ;
             } else {
-                parse(); // type
-                pn(); // varName
-                next();
+                String type = t.tokenType().equals("KEYWORD") ? t.keyWord() : t.identifier(); 
+                next(); 
+                String name = t.identifier();
+                next(); 
+                st.Define(name, type, "ARG");
+                locals++;
+                System.out.println(name + " " + st.KindOf(name) + " " + st.TypeOf(name) + " " + st.IndexOf(name));
+
                 while (t.tokenType().equals("SYMBOL") && t.symbol() == ',') {
-                    parse(); // ,
-                    pn(); // type
-                    pn(); // varName
+                    next(); 
+                    type = t.tokenType().equals("KEYWORD") ? t.keyWord() : t.identifier(); 
+                    next(); 
+                    name = t.identifier();
                     next();
+                    st.Define(name, type, "ARG");
+                    locals++;
+                    System.out.println(name + " " + st.KindOf(name) + " " + st.TypeOf(name) + " " + st.IndexOf(name));
                 }
             }
-            p.println("</parameterList>");
+
+            return locals;
         }
 
-        public  void CompileVarDec() throws Exception {
-            while (t.tokenType().equals("KEYWORD") && t.keyWord().equals("var")) {
-                p.println("<varDec>");
-                parse(); // var
-                pn(); // type
-                pn(); // varName 
-
-                next();
+        public void CompileVarDec() throws Exception {
+                next(); // var
+                String type = t.tokenType().equals("KEYWORD") ? t.keyWord() : t.identifier();
+                next(); // type
+                String name = t.identifier();
+                st.Define(name, type, "VAR");
+                System.out.println(name + " " + st.KindOf(name) + " " + st.TypeOf(name) + " " + st.IndexOf(name));
+                next(); // varName 
 
                 while (t.tokenType().equals("SYMBOL") && t.symbol() == ',') {
-                    parse(); // ,
-                    pn(); // varName
+                    next(); // ,
+                    name = t.identifier();
+                    st.Define(name, type, "VAR");
+                    System.out.println(name + " " + st.KindOf(name) + " " + st.TypeOf(name) + " " + st.IndexOf(name));
                     next();
                 }
-                parse(); // ;
-                next();
-                p.println("</varDec>");
-            }
-
         }
 
         public  void CompileStatements() throws Exception {
-            p.println("<statements>");
             while (t.tokenType().equals("KEYWORD")) {
                 if (t.keyWord().equals("let")) {
                     CompileLet();
@@ -516,182 +545,217 @@ public class JackCompiler {
                     break;
                 }
             }
-            p.println("</statements>");
         }
 
         public void  CompileDo() throws Exception {
-            p.println("<doStatement>");
-            parse(); // do
-            pn(); // subroutineName or className or varName
+            next(); // do
+            next(); // subroutineName or className or varName
             next();
             if (t.tokenType().equals("SYMBOL") && t.symbol() == '(') {
-                parse(); // (
+                next(); // (
                 CompileExpressionList();
-                parse(); // )
+                next(); // )
             } else if (t.symbol() == '.') {
-                parse(); // .
-                pn(); // subroutineName
-                pn(); // (
+                next(); // .
+                next(); // subroutineName
+                next(); // (
                 CompileExpressionList();
-                parse(); // )
+                next(); // )
             }
-            pn(); // ;
-            p.println("</doStatement>");
+            next(); // ;
 
 
         }
 
         public void  CompileLet() throws Exception{
-            p.println("<letStatement>");
-            parse(); // let
-            pn(); // varName
-            next();
+            next(); // let
+            String varName = t.identifier();
+            System.out.println("Compiling Let " + varName); 
+            String segment;
+            if (st.KindOf(varName).equals("FIELD")) {
+                segment = "THIS";
+            } else if (st.KindOf(varName).equals("VAR")) {
+                segment = "LOCAL";
+            } else {
+                segment = st.KindOf(varName);
+            }
+            int index = st.IndexOf(varName);
+            next(); 
             if (t.symbol() == '[') {
-                parse(); // [
+                next(); // [
                 next();
                 CompileExpression();
-                parse(); // ] possible bug
+                next(); // ] possible bug
                 next();
             } 
 
-            parse(); // =
             next();
             CompileExpression();
-            parse(); // ;
+            currentToken();
+            v.writePop(segment, index);
 
-            p.println("</letStatement>"); 
         }
         
 
         public void  CompileWhile() throws Exception {
-            p.println("<whileStatement>");
-            parse(); // while
-            pn(); // (
+            next(); // while
+            next(); // (
             next();
             CompileExpression();
-            parse(); // )
-            pn(); // {
+            next(); // )
+            next(); // {
             next();
             CompileStatements();
-            parse(); // }
-            p.println("</whileStatement>");
+            next(); // }
         }
 
 
         public void  CompileReturn() throws Exception {
-            p.println("<returnStatement>"); 
-            parse(); // return
+            next(); // return
             next(); 
             if (!t.tokenType().equals("SYMBOL")) {
                 CompileExpression();
             }
-            parse(); // ;
-            p.println("</returnStatement>");
+            next(); // ;
             
         }
 
         public void  CompileIf() throws Exception {
-            p.println("<ifStatement>");
-            parse(); // If
-            pn(); // (
+            next(); // If
+            next(); // (
             next();
             CompileExpression();
-            parse(); // )
-            pn(); // {
+            next(); // )
+            next(); // {
             next();
             CompileStatements();
-            parse(); // }
+            next(); // }
             next();
             if (t.tokenType().equals("KEYWORD") && t.keyWord().equals("else")) {
-                parse(); // else
-                pn(); // {
+                next(); // else
+                next(); // {
                 next();
                 CompileStatements();
-                parse(); // }
+                next(); // }
                 next();
             }
-            p.println("</ifStatement>");
             
         }
 
         public void  CompileExpression() throws Exception {
-            p.println("<expression>");
             CompileTerm();
             while (t.tokenType().equals("SYMBOL") && op.contains(Character.toString(t.symbol()))) {
-                parse(); // op
-                next();
+                char o = t.symbol();
+                next(); 
                 CompileTerm();
+                switch (o) {
+                    case '+':
+                        v.writeArithmetic("ADD");
+                        break;
+                    case '-':
+                        v.writeArithmetic("SUB");
+                        break;
+                    case '=':
+                        v.writeArithmetic("EQ");
+                        break;
+                    case '>':
+                        v.writeArithmetic("GT");
+                        break;
+                    case '<':
+                        v.writeArithmetic("LT");
+                        break;
+                    case '&':
+                        v.writeArithmetic("AND");
+                        break;
+                    case '|':
+                        v.writeArithmetic("OR");
+                        break;
+                    case '*':
+                        v.writeCall("Math.Multiply", 2);
+                        break;
+                }
             }
                  
-            p.println("</expression>");
         }
 
-        public  void CompileTerm() throws Exception {
+        public void CompileTerm() throws Exception {
+            if (t.tokenType().equals("INT_CONST")) {
+                v.writePush("CONST", t.intVal);
+                next();
+            } 
+
+            if (t.tokenType().equals("IDENTIFIER")) {
+                String name = t.identifier();
+                next();
+                if (t.symbol == '[') {
+                    ; // Array
+                } else if (t.symbol == '.') {
+                    next();
+                    String m = t.identifier();
+                    next(); // (
+                    next();
+                    int args = CompileExpressionList();
+                    v.writeCall(name + "." + m, args);
+                    ; // Subroutine Call with Class
+                } else if (t.symbol == '(') {
+                    next();
+                    int args = CompileExpressionList();
+                    v.writeCall(name, args);
+                } else {
+                    System.out.println("Correct");
+                    String segment;
+                    if (st.KindOf(name).equals("FIELD")) {
+                        segment = "THIS";
+                    } else if (st.KindOf(name).equals("VAR")) {
+                        segment = "LOCAL";
+                    } else {
+                        segment = st.KindOf(name);
+                    }
+                    int index = st.IndexOf(name);
+                    v.writePush(segment, index);
+                }
+            }
             
-            p.println("<term>");
             if (t.tokenType().equals("SYMBOL")) {
                 if (t.symbol() == '(') {
-                    parse();
                     next();
                     CompileExpression();
-                    parse();
                     next();
-                } else if (t.symbol == '~' || t.symbol == '-') {
-                    parse();
+                } else if (t.symbol == '~') {
                     next();
                     CompileTerm();
-                }
-            } else {
-                    parse(); 
+                    v.writeArithmetic("NOT");
+                } else if (t.symbol == '-') {
                     next();
-                    if (t.tokenType().equals("SYMBOL")) {
-                        if (t.symbol() == '[') {
-                            parse();
-                            next();
-                            CompileExpression();
-                            parse();
-                            next();
-                        } else if (t.symbol() == '(') {
-                            parse();
-                            CompileExpressionList();
-                            parse();
-                            next();
-                        } else if (t.symbol() == '.') {
-                            parse();
-                            pn();
-                            pn();
-                            CompileExpressionList();
-                            parse();
-                            next();
-                        }
-                    }
-                        
+                    CompileTerm();
+                    v.writeArithmetic("NEG");
                 }
-            p.println("</term>");
+            } 
+
         }
          
 
-        public void CompileExpressionList() throws Exception {
-            p.println("<expressionList>");
-            next();
-            if (!t.tokenType().equals("SYMBOL") || t.symbol() != ')') {
+        public int CompileExpressionList() throws Exception {
+            int args = 0;
+            if (!t.tokenType().equals("SYMBOL") || t.symbol != ')') {
                 CompileExpression();
+                args++;
                 while (t.symbol() == ',') {
-                    parse(); // ,
-                    next();
+                    next(); // ,
                     CompileExpression();
+                    args++;
                 }
             }
-            p.println("</expressionList>");
-            
-
+            next(); // )
+            return args;
         }
-
+            
         private String op = "+-*/&|<>=";
         private String unary = "-~";
 
         private JackTokenizer t;
         private VMWriter v;
+        private SymbolTable st;
     }
 
 

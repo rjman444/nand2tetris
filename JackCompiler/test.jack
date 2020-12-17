@@ -1,0 +1,15 @@
+class Test {
+    field int x, g;
+    static Car y;
+
+    function void main(Car d, Hello l) {
+        var int t, j;
+        var Hello d, s;
+        let t = 8 * -(-5 + 2);
+        let x = t + 2;
+        let j = y.wheels() + d.honk(5, s) + add(2,4);
+    }
+
+
+}
+
