@@ -26,8 +26,10 @@ public class JackCompiler {
                Symbol S = new Symbol(type, kind, staticCount++);
                ctb.put(name, S);
            } else if (kind.equals("FIELD")) {
+               System.out.println(VarCount("FIELD"));
                Symbol S = new Symbol(type, kind, fieldCount++);
                ctb.put(name, S);
+               System.out.println(VarCount("FIELD"));
            } else if (kind.equals("ARG")) {
                Symbol S = new Symbol(type, kind, argCount++);
                srtb.put(name, S);
@@ -42,13 +44,13 @@ public class JackCompiler {
 
        public int VarCount(String kind) {
            if (kind.equals("STATIC")) {
-               return staticCount + 1;
+               return staticCount;
            } else if (kind.equals("FIELD")) {
-               return fieldCount + 1;
+               return fieldCount;
            } else if (kind.equals("ARG")) {
-               return argCount + 1;
+               return argCount;
            } else if (kind.equals("VAR")) {
-               return varCount + 1;
+               return varCount;
            } else {
                System.out.println("ERROR: Wrong kind given to VarCount");
                return 0;
@@ -408,6 +410,7 @@ public class JackCompiler {
 
             next(); // Compile class keyword
             next(); // Compile className
+            className = t.identifier();
             next(); // Compile { symbol
             next();
 
@@ -450,6 +453,7 @@ public class JackCompiler {
 
         public void CompileSubRoutine() throws Exception {
             st.startSubroutine();
+            String subroutineType = t.keyWord();
             
             next(); // constructor or function or method
             next(); // void or type
@@ -457,28 +461,50 @@ public class JackCompiler {
             String subRoutineName = t.identifier();
             next(); // subroutine name
 
-            int locals = CompileParameterList();
-            next();
+            if (subroutineType.equals("method")) {
+                System.out.println("Compiling method");
+                st.Define("this", className, "ARG");
+            }
 
-            v.writeFunction(subRoutineName, locals);
+            CompileParameterList();
+
+            next();
 
             // Subroutine Body
             next(); // {
 
-
-            // Var Decs
-
+            int locals = 0;
+            
             while (t.tokenType().equals("KEYWORD") && t.keyWord().equals("var")) {
-                CompileVarDec();
+                locals += CompileVarDec();
                 next();
             }
 
+            v.writeFunction(className + "." + subRoutineName, locals);
+            if (subroutineType.equals("constructor")) {
+                int size = st.VarCount("FIELD");
+                v.writePush("CONST", size);
+                v.writeCall("Memory.alloc", 1);
+                v.writePop("POINTER", 0);
+            }
+
+
+            if (subroutineType.equals("method")) {
+                v.writePush("ARG", 0);
+                v.writePop("POINTER", 0);
+            } 
+
+
+
+            // Var Decs
+
+
             // Statements
             CompileStatements();
+            currentToken();
         }
 
-        public int CompileParameterList() throws Exception {
-            int locals = 0;
+        public void CompileParameterList() throws Exception {
             next();
             if (t.tokenType().equals("SYMBOL")) {
                 ;
@@ -488,7 +514,6 @@ public class JackCompiler {
                 String name = t.identifier();
                 next(); 
                 st.Define(name, type, "ARG");
-                locals++;
                 System.out.println(name + " " + st.KindOf(name) + " " + st.TypeOf(name) + " " + st.IndexOf(name));
 
                 while (t.tokenType().equals("SYMBOL") && t.symbol() == ',') {
@@ -498,15 +523,14 @@ public class JackCompiler {
                     name = t.identifier();
                     next();
                     st.Define(name, type, "ARG");
-                    locals++;
                     System.out.println(name + " " + st.KindOf(name) + " " + st.TypeOf(name) + " " + st.IndexOf(name));
                 }
             }
 
-            return locals;
         }
 
-        public void CompileVarDec() throws Exception {
+        public int CompileVarDec() throws Exception {
+                int locals = 1;
                 next(); // var
                 String type = t.tokenType().equals("KEYWORD") ? t.keyWord() : t.identifier();
                 next(); // type
@@ -520,11 +544,13 @@ public class JackCompiler {
                     name = t.identifier();
                     st.Define(name, type, "VAR");
                     System.out.println(name + " " + st.KindOf(name) + " " + st.TypeOf(name) + " " + st.IndexOf(name));
+                    locals++;
                     next();
                 }
+                return locals;
         }
 
-        public  void CompileStatements() throws Exception {
+        public void CompileStatements() throws Exception {
             while (t.tokenType().equals("KEYWORD")) {
                 if (t.keyWord().equals("let")) {
                     CompileLet();
@@ -547,23 +573,38 @@ public class JackCompiler {
             }
         }
 
-        public void  CompileDo() throws Exception {
+        public void CompileDo() throws Exception {
             next(); // do
-            next(); // subroutineName or className or varName
+            String name = t.identifier();
+            int args = 0;
             next();
             if (t.tokenType().equals("SYMBOL") && t.symbol() == '(') {
                 next(); // (
-                CompileExpressionList();
-                next(); // )
+                name = className + "." + name;
+                v.writePush("POINTER", 0);
+                args = 1 + CompileExpressionList();
             } else if (t.symbol() == '.') {
                 next(); // .
-                next(); // subroutineName
+                if (!st.KindOf(name).equals("NONE")) {
+                    String segment;
+                    if (st.KindOf(name).equals("FIELD")) {
+                        segment = "THIS";
+                    } else if (st.KindOf(name).equals("VAR")) {
+                        segment = "LOCAL";
+                    } else {
+                        segment = st.KindOf(name);
+                    }
+                    v.writePush(segment, st.IndexOf(name));
+                    name = st.TypeOf(name) + "." + t.identifier();
+                    args++;
+                } else {
+                    name = name + "." + t.identifier();
+                }
                 next(); // (
-                CompileExpressionList();
-                next(); // )
+                next();
+                args += CompileExpressionList();
             }
-            next(); // ;
-
+            v.writeCall(name, args);
 
         }
 
@@ -582,63 +623,80 @@ public class JackCompiler {
             int index = st.IndexOf(varName);
             next(); 
             if (t.symbol() == '[') {
-                next(); // [
+                v.writePush(segment, index);
                 next();
                 CompileExpression();
-                next(); // ] possible bug
+                v.writeArithmetic("ADD");
                 next();
-            } 
-
-            next();
-            CompileExpression();
-            currentToken();
-            v.writePop(segment, index);
-
+                next();
+                CompileExpression();
+                v.writePop("TEMP", 0);
+                v.writePop("POINTER", 1);
+                v.writePush("TEMP", 0);
+                v.writePop("THAT", 0);
+            } else {
+                next();
+                CompileExpression();
+                v.writePop(segment, index);
+            }
         }
         
 
         public void  CompileWhile() throws Exception {
+            int currentLabel = labelCount;
+            labelCount++;
+            System.out.println("Compiling while");
             next(); // while
             next(); // (
-            next();
+            v.writeLabel("whileStart" + Integer.toString(currentLabel));
             CompileExpression();
-            next(); // )
-            next(); // {
+            v.writeArithmetic("NOT");
+            v.writeIf("whileEnd" + Integer.toString(currentLabel));
+            next();
             next();
             CompileStatements();
-            next(); // }
+            v.writeGoto("whileStart" + Integer.toString(currentLabel));
+            v.writeLabel("whileEnd" + Integer.toString(currentLabel));
+            currentToken();
         }
 
 
-        public void  CompileReturn() throws Exception {
-            next(); // return
+        public void CompileReturn() throws Exception {
             next(); 
-            if (!t.tokenType().equals("SYMBOL")) {
-                CompileExpression();
+            if (!t.tokenType().equals("SYMBOL") || t.symbol != ';') {
+                if (t.tokenType().equals("KEYWORD") && t.keyWord().equals("this")) {
+                    v.writePush("POINTER", 0);
+                    next();
+                } else {
+                    CompileExpression();
+                }
             }
-            next(); // ;
-            
+            v.writeReturn();
         }
 
-        public void  CompileIf() throws Exception {
+        public void CompileIf() throws Exception {
+            int currentLabel = labelCount;
+            labelCount += 2;
             next(); // If
             next(); // (
-            next();
             CompileExpression();
-            next(); // )
+            v.writeArithmetic("NOT");
+            v.writeIf("L" + Integer.toString(currentLabel));
             next(); // {
             next();
             CompileStatements();
-            next(); // }
+            v.writeGoto("L" + Integer.toString(currentLabel + 1));
+            v.writeLabel("L" + Integer.toString(currentLabel));
             next();
+            currentToken();
             if (t.tokenType().equals("KEYWORD") && t.keyWord().equals("else")) {
+                System.out.println("Compiling else");
                 next(); // else
                 next(); // {
-                next();
                 CompileStatements();
                 next(); // }
-                next();
             }
+            v.writeLabel("L" + Integer.toString(currentLabel + 1));
             
         }
 
@@ -671,7 +729,7 @@ public class JackCompiler {
                         v.writeArithmetic("OR");
                         break;
                     case '*':
-                        v.writeCall("Math.Multiply", 2);
+                        v.writeCall("Math.multiply", 2);
                         break;
                 }
             }
@@ -682,27 +740,60 @@ public class JackCompiler {
             if (t.tokenType().equals("INT_CONST")) {
                 v.writePush("CONST", t.intVal);
                 next();
-            } 
-
-            if (t.tokenType().equals("IDENTIFIER")) {
+            } else if (t.tokenType().equals("KEYWORD")) {
+                if (t.keyWord().equals("true")) {
+                    v.writePush("CONST", 1);
+                    v.writeArithmetic("NEG");
+                } else if (t.keyWord().equals("false")) {
+                    v.writePush("CONST", 0);
+                }
+                next();
+            }else if (t.tokenType().equals("IDENTIFIER")) {
                 String name = t.identifier();
                 next();
                 if (t.symbol == '[') {
-                    ; // Array
+                    String segment;
+                    if (st.KindOf(name).equals("FIELD")) {
+                        segment = "THIS";
+                    } else if (st.KindOf(name).equals("VAR")) {
+                        segment = "LOCAL";
+                    } else {
+                        segment = st.KindOf(name);
+                    }
+                    int index = st.IndexOf(name);
+                    v.writePush(segment, index);
+                    next();
+                    CompileExpression();
+                    v.writeArithmetic("ADD");
+                    v.writePop("POINTER", 1);
+                    v.writePush("THAT", 0);
+                    next();
                 } else if (t.symbol == '.') {
                     next();
                     String m = t.identifier();
                     next(); // (
                     next();
                     int args = CompileExpressionList();
-                    v.writeCall(name + "." + m, args);
-                    ; // Subroutine Call with Class
+                    if (!st.KindOf(name).equals("NONE")) {
+                        String segment;
+                        if (st.KindOf(name).equals("FIELD")) {
+                            segment = "THIS";
+                        } else if (st.KindOf(name).equals("VAR")) {
+                            segment = "LOCAL";
+                        } else {
+                            segment = st.KindOf(name);
+                        }
+                        v.writePush(segment, st.IndexOf(name));
+                        v.writeCall(st.TypeOf(name) + "." + m, 1 + args);
+                    } else {
+                        v.writeCall(name + "." + m, args);
+                    }
                 } else if (t.symbol == '(') {
                     next();
-                    int args = CompileExpressionList();
-                    v.writeCall(name, args);
+                    int args = 1 + CompileExpressionList();
+                    v.writePush("POINTER", 0);
+                    v.writeCall(className + "." + name, args);
                 } else {
-                    System.out.println("Correct");
                     String segment;
                     if (st.KindOf(name).equals("FIELD")) {
                         segment = "THIS";
@@ -714,9 +805,7 @@ public class JackCompiler {
                     int index = st.IndexOf(name);
                     v.writePush(segment, index);
                 }
-            }
-            
-            if (t.tokenType().equals("SYMBOL")) {
+            } else if (t.tokenType().equals("SYMBOL")) {
                 if (t.symbol() == '(') {
                     next();
                     CompileExpression();
@@ -749,10 +838,11 @@ public class JackCompiler {
             next(); // )
             return args;
         }
-            
+
+        private String className;
         private String op = "+-*/&|<>=";
         private String unary = "-~";
-
+        private int labelCount = 0;
         private JackTokenizer t;
         private VMWriter v;
         private SymbolTable st;

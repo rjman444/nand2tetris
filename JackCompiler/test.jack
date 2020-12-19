@@ -1,14 +1,33 @@
 class Test {
     field int x, g;
-    static Car y;
 
     function void main(Car d, Hello l) {
         var int t, j;
         var Hello d, s;
-        let t = 8 * -(-5 + 2);
-        let x = t + 2;
-        let j = y.wheels() + d.honk(5, s) + add(2,4);
+        do d.hi(t, t, 5 + 6);
+        do s(5, 8 - 3 - 4);
+        let x = t[6];
+        let t[5] = t[2];
+        let t = 5;
+        return t;
     }
+
+    method void hello(Test other) {
+        var int h, l;
+        let x = x + other.getx();
+        let g = g + other.getg();
+    }
+
+    constructor Test new(int ax, int ag) {
+        let x = ax;
+        let g = ag;
+        return this;
+    }
+
+    function void test() {
+        return;
+    }
+    
 
 
 }
